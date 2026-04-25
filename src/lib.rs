@@ -23,7 +23,7 @@ impl PasswordManager {
     pub fn new(master_password: String) -> Self {
         PasswordManager {
             state: State::Locked,
-            master_password,
+            master_password: encrypt_password(master_password),
             password: HashMap::new(),
         }
     }
@@ -71,7 +71,7 @@ impl PasswordManager {
         }
         if let Some(entry) = self.password.get_mut(&url) {
             entry.username = username;
-            entry.password = new_password;
+            entry.password = encrypt_password(new_password);
 
             Ok(())
         } else {
