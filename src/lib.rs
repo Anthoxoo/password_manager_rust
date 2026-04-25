@@ -1,3 +1,5 @@
+use bcrypt::{DEFAULT_COST, hash, verify};
+
 use std::collections::HashMap;
 
 pub struct PasswordManager {
@@ -27,7 +29,7 @@ impl PasswordManager {
     }
 
     pub fn open_manager(&mut self, master_pass: String) -> Result<(), &'static str> {
-        if master_pass == self.master_password {
+        if verify(master_pass, &self.master_password).expect("Error hashing password.") {
             self.state = State::Unlocked;
             Ok(())
         } else {
@@ -97,5 +99,5 @@ impl PasswordManager {
 }
 
 fn encrypt_password(password: String) -> String {
-    todo!()
+    hash(password, DEFAULT_COST).expect("Error hashing password.")
 }
