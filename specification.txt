@@ -1,0 +1,1 @@
+i want the manager to be able to be openend or closed, if openend we can store passwords, change them, list them. When closed wwe want to not be able to acces any of theses. Lastly i want de passwords to be hashed and finally make a good looking cli.
