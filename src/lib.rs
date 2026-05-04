@@ -1,29 +1,48 @@
 use bcrypt::{DEFAULT_COST, hash, verify};
 use magic_crypt::{MagicCrypt256, MagicCryptTrait, new_magic_crypt};
+use serde::{Deserialize, Serialize};
+use std::fs;
 
 use std::collections::HashMap;
 
+#[derive(Serialize, Deserialize)]
 pub struct PasswordManager {
+    #[serde(skip)]
     state: State,
     master_password: String,
-    password: HashMap<String, Password>,
+    #[serde(skip)]
     encryption_key: Option<String>,
+    password: HashMap<String, Password>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Password {
     username: String,
     password: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 enum State {
+    #[default]
     Locked,
     Unlocked,
 }
 
 impl PasswordManager {
-    pub fn new(master_password: String) -> Self {
+    const FILE_PATH: &'static str = "passwords.json";
+
+    pub fn load_or_new(master_password: String) -> Self {
+        if let Ok(json_data) = fs::read_to_string(Self::FILE_PATH) {
+            // File exists
+            if let Ok(mut manager) = serde_json::from_str::<PasswordManager>(&json_data) {
+                // We managed to read it properly
+                manager.state = State::Locked;
+                manager.encryption_key = None;
+                // no need for the master pass and the passwords because serde did it for us by serialize it from the json file.
+                return manager;
+            }
+        }
+
         PasswordManager {
             state: State::Locked,
             master_password: hash(master_password, DEFAULT_COST)
@@ -48,6 +67,7 @@ impl PasswordManager {
     pub fn close_manager(&mut self) {
         self.state = State::Locked;
         self.encryption_key = None;
+        self.save_file().expect("Error saving the file.")
     }
 
     pub fn add_password(
@@ -122,6 +142,20 @@ impl PasswordManager {
         }
 
         Ok(())
+    }
+
+    fn save_file(&self) -> Result<(), &'static str> {
+        if self.state == State::Unlocked {
+            return Err("The manager is unlocked, you must lock it before saving the file.");
+        } else {
+            let json_data =
+                serde_json::to_string_pretty(self).expect("Error serializing to the json format.");
+
+            fs::write(Self::FILE_PATH, json_data)
+                .expect("Error trying to save the file on the disk.");
+
+            Ok(())
+        }
     }
 }
 
