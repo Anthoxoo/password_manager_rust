@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 bcrypt = "0.19.0"
+magic-crypt = "4.0.1"
