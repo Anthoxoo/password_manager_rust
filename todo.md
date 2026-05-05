@@ -1,0 +1,3 @@
+- make my own cypher algorithm
+- make it so we can launch it from anywhere in the terminal.
+- gui ?
