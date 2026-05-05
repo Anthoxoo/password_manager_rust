@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
-use dialoguer::Password;
-use password_manager::PasswordManager;
+use password_manager::*;
 use std::process;
 
 #[derive(Parser)]
@@ -17,8 +16,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Open,
-    Close,
+    Exit,
     Add {
         #[arg(short, long)]
         url: String,
@@ -43,38 +41,43 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
 
-    match PasswordManager::load() {
-        Ok(mut existing_manager) => {
-            // mut because open_manager takes a &mut self
-            let input_master = Password::new()
-                .with_prompt("Enter your master password : ")
+    let mut manager = launch_program();
+
+    match cli.command {
+        Commands::Exit => manager.close_manager(),
+        Commands::Add { url, username } => {
+            let input_password = dialoguer::Password::new()
+                .with_prompt("Enter your master password ")
                 .interact()
                 .unwrap();
 
-            if let Err(e) = existing_manager.open_manager(input_master) {
-                eprintln!("Denied acces ! : {}", e);
-                process::exit(1);
+            if let Err(e) = manager.add_password(url, username, input_password) {
+                eprintln!("An error occurred : {}", e);
+                process::exit(2);
             }
-
-            existing_manager
         }
-        Err(_) => {
-            println!("Welcome on our password manager !");
-
-            let new_master = Password::new()
-                .with_prompt("Create a master password (you'll have to remember it !!)")
-                .with_confirmation("Retype de password, authentication failed.", "error")
+        Commands::Delete { url } => {
+            if let Err(e) = manager.delete_password(url) {
+                eprintln!("An error occurred : {}", e);
+                process::exit(3);
+            }
+        }
+        Commands::Modify { url, new_username } => {
+            let input_password = dialoguer::Password::new()
+                .with_prompt("Enter your master password ")
                 .interact()
                 .unwrap();
 
-            let new_manager = PasswordManager::new(new_master);
-
-            if let Err(e) = new_manager.save_file() {
-                eprintln!("Error while saving the file on the disk : {}", e);
-                process::exit(1);
+            if let Err(e) = manager.modify_password(url, new_username, input_password) {
+                eprintln!("An error occurred : {}", e);
+                process::exit(3);
             }
-
-            new_manager
         }
-    };
+        Commands::List => {
+            if let Err(e) = manager.list_passwords() {
+                eprintln!("An error occurred : {}", e);
+                process::exit(4);
+            }
+        }
+    }
 }
