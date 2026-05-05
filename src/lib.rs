@@ -1,9 +1,9 @@
 use bcrypt::{DEFAULT_COST, hash, verify};
 use magic_crypt::{MagicCrypt256, MagicCryptTrait, new_magic_crypt};
 use serde::{Deserialize, Serialize};
-use std::fs;
-
 use std::collections::HashMap;
+use std::fs;
+use std::process;
 
 #[derive(Serialize, Deserialize)]
 pub struct PasswordManager {
@@ -147,7 +147,7 @@ impl PasswordManager {
         Ok(())
     }
 
-    pub fn save_file(&self) -> Result<(), &'static str> {
+    fn save_file(&self) -> Result<(), &'static str> {
         if self.state == State::Unlocked {
             return Err("The manager is unlocked, you must lock it before saving the file.");
         } else {
@@ -169,4 +169,41 @@ fn encrypt_password(password: String, key: MagicCrypt256) -> String {
 fn decrypt_password(password: String, key: MagicCrypt256) -> String {
     key.decrypt_base64_to_string(password)
         .expect("Error decrypting the password.")
+}
+
+pub fn launch_program() -> PasswordManager {
+    match PasswordManager::load() {
+        Ok(mut existing_manager) => {
+            // mut because open_manager takes a &mut self
+            let input_master = dialoguer::Password::new()
+                .with_prompt("Enter your master password ")
+                .interact()
+                .unwrap();
+
+            if let Err(e) = existing_manager.open_manager(input_master) {
+                eprintln!("Denied acces ! : {}", e);
+                process::exit(1);
+            }
+
+            existing_manager
+        }
+        Err(_) => {
+            println!("Welcome on our password manager !");
+
+            let new_master = dialoguer::Password::new()
+                .with_prompt("Create a master password (you'll have to remember it !!)")
+                .with_confirmation("Retype de password, authentication failed.", "error")
+                .interact()
+                .unwrap();
+
+            let new_manager = PasswordManager::new(new_master);
+
+            if let Err(e) = new_manager.save_file() {
+                eprintln!("Error while saving the file on the disk : {}", e);
+                process::exit(1);
+            }
+
+            new_manager
+        }
+    }
 }
