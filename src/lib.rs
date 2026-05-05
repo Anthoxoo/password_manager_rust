@@ -52,6 +52,14 @@ impl PasswordManager {
         }
     }
 
+    pub fn new() {
+        unimplemented!()
+    }
+
+    pub fn load() {
+        unimplemented!()
+    }
+
     pub fn open_manager(&mut self, master_pass: String) -> Result<(), &'static str> {
         if verify(&master_pass, &self.master_password)
             .expect("Error hashing password to verify it.")
