@@ -31,18 +31,7 @@ enum State {
 impl PasswordManager {
     const FILE_PATH: &'static str = "passwords.json";
 
-    pub fn load_or_new(master_password: String) -> Self {
-        if let Ok(json_data) = fs::read_to_string(Self::FILE_PATH) {
-            // File exists
-            if let Ok(mut manager) = serde_json::from_str::<PasswordManager>(&json_data) {
-                // We managed to read it properly
-                manager.state = State::Locked;
-                manager.encryption_key = None;
-                // no need for the master pass and the passwords because serde did it for us by serialize it from the json file.
-                return manager;
-            }
-        }
-
+    pub fn new(master_password: String) -> Self {
         PasswordManager {
             state: State::Locked,
             master_password: hash(master_password, DEFAULT_COST)
@@ -52,12 +41,18 @@ impl PasswordManager {
         }
     }
 
-    pub fn new() {
-        unimplemented!()
-    }
-
-    pub fn load() {
-        unimplemented!()
+    pub fn load() -> Result<Self, &'static str> {
+        if let Ok(json_data) = fs::read_to_string(Self::FILE_PATH) {
+            // File exists
+            if let Ok(mut manager) = serde_json::from_str::<PasswordManager>(&json_data) {
+                // We managed to read it properly
+                manager.state = State::Locked;
+                manager.encryption_key = None;
+                // no need for the master pass and the passwords because serde did it for us by serialize it from the json file.
+                return Ok(manager);
+            }
+        }
+        Err("Error loading the password.json file.")
     }
 
     pub fn open_manager(&mut self, master_pass: String) -> Result<(), &'static str> {
@@ -152,7 +147,7 @@ impl PasswordManager {
         Ok(())
     }
 
-    fn save_file(&self) -> Result<(), &'static str> {
+    pub fn save_file(&self) -> Result<(), &'static str> {
         if self.state == State::Unlocked {
             return Err("The manager is unlocked, you must lock it before saving the file.");
         } else {
