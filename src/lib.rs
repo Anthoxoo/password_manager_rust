@@ -29,7 +29,7 @@ enum State {
 }
 
 impl PasswordManager {
-    const FILE_PATH: &'static str = "passwords.json";
+    const FILE_PATH: &'static str = "~/.config/password-manager/password.json";
 
     pub fn new(master_password: String) -> Self {
         PasswordManager {
@@ -208,13 +208,9 @@ pub fn launch_program() -> PasswordManager {
     }
 }
 
-fn find_folder() -> Result<String, &'static str> {
-    todo!(
-        "This function will return a result, Ok with the path of the folder if the folder password-manager exists, err else. "
-    )
-}
-
-fn create_folder() -> Result<String, &'static str> {
-    todo!("This function will create the folder we need if find_folder did not find the foler, it will return the file path of the folder else
-        an error if something strange happen")
+pub fn find_create_folder(path: &str) -> Result<(), &'static str> {
+    match fs::create_dir_all(&path) {
+        Ok(_) => Ok(()),
+        Err(_) => Err("Cannot find or create the folder."),
+    }
 }

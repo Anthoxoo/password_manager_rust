@@ -42,6 +42,8 @@ fn main() {
     let cli = Cli::parse();
 
     let mut manager = launch_program();
+    find_create_folder("~/.config/password-manager")
+        .expect("Error creating or finding the folder.");
 
     match cli.command {
         Commands::Exit => manager.close_manager(),
