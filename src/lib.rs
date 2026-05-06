@@ -207,3 +207,14 @@ pub fn launch_program() -> PasswordManager {
         }
     }
 }
+
+fn find_folder() -> Result<String, &'static str> {
+    todo!(
+        "This function will return a result, Ok with the path of the folder if the folder password-manager exists, err else. "
+    )
+}
+
+fn create_folder() -> Result<String, &'static str> {
+    todo!("This function will create the folder we need if find_folder did not find the foler, it will return the file path of the folder else
+        an error if something strange happen")
+}
