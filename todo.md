@@ -1,3 +1,4 @@
 - make my own cypher algorithm
 - make it so we can launch it from anywhere in the terminal.
+    - In order to do it, i'll have to go search in the .config folder, if the password-manager already exists, we go in it else we create it, this place will be where we keep our password.json.
 - gui ?
