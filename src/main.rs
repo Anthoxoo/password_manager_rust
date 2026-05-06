@@ -18,21 +18,21 @@ struct Cli {
 enum Commands {
     Exit,
     Add {
-        #[arg(short, long)]
+        #[arg(long)]
         url: String,
 
-        #[arg(short, long)]
+        #[arg(long)]
         username: String,
     },
     Delete {
-        #[arg(short, long)]
+        #[arg(long)]
         url: String,
     },
     Modify {
-        #[arg(short, long)]
+        #[arg(long)]
         url: String,
 
-        #[arg(short, long)]
+        #[arg(long)]
         new_username: String,
     },
     List,
