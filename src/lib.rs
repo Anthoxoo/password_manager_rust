@@ -41,14 +41,18 @@ impl PasswordManager {
 
     pub fn load(path: String) -> Result<Self, &'static str> {
         let new_path = format!("{}/passwords.json", path);
+        // println!("{}", new_path);
         if let Ok(json_data) = fs::read_to_string(new_path) {
             // File exists
             if let Ok(mut manager) = serde_json::from_str::<PasswordManager>(&json_data) {
+                // problem is here
                 // We managed to read it properly
                 manager.state = State::Locked;
                 manager.encryption_key = None;
                 // no need for the master pass and the passwords because serde did it for us by serialize it from the json file.
                 return Ok(manager);
+            } else {
+                println!("erreur serde")
             }
         }
         Err("Error loading the password.json file.")
@@ -197,13 +201,16 @@ pub fn launch_program() -> PasswordManager {
             .interact()
             .unwrap();
 
-        let new_manager = PasswordManager::new(new_master);
+        let mut new_manager = PasswordManager::new(new_master.clone());
 
         if let Err(e) = new_manager.save_file(file_path.clone()) {
             eprintln!("Error while saving the file on the disk : {}", e);
             process::exit(1);
         }
 
+        new_manager
+            .open_manager(new_master)
+            .expect("Error opening manager");
         new_manager
     }
 }
@@ -212,11 +219,7 @@ pub fn create_config_folder(path: &str) -> Result<(), &'static str> {
     if let Err(_) = fs::create_dir_all(&path) {
         return Err("Error creating the password-manager folder.");
     }
-    let new_path = format!("{}/passwords.json", path);
-    match fs::File::create(new_path) {
-        Ok(_) => Ok(()),
-        Err(_) => Err("Cannot create the password.json file."),
-    }
+    Ok(())
 }
 
 pub fn get_full_file_path(relative_path: &str) -> Result<String, &'static str> {
