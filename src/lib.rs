@@ -2,6 +2,7 @@ use bcrypt::{DEFAULT_COST, hash, verify};
 use magic_crypt::{MagicCrypt256, MagicCryptTrait, new_magic_crypt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::env;
 use std::fs;
 use std::process;
 
@@ -27,10 +28,7 @@ enum State {
     Locked,
     Unlocked,
 }
-
 impl PasswordManager {
-    const FILE_PATH: &'static str = "~/.config/password-manager/password.json";
-
     pub fn new(master_password: String) -> Self {
         PasswordManager {
             state: State::Locked,
@@ -41,8 +39,9 @@ impl PasswordManager {
         }
     }
 
-    pub fn load() -> Result<Self, &'static str> {
-        if let Ok(json_data) = fs::read_to_string(Self::FILE_PATH) {
+    pub fn load(path: String) -> Result<Self, &'static str> {
+        let new_path = format!("{}/passwords.json", path);
+        if let Ok(json_data) = fs::read_to_string(new_path) {
             // File exists
             if let Ok(mut manager) = serde_json::from_str::<PasswordManager>(&json_data) {
                 // We managed to read it properly
@@ -67,10 +66,10 @@ impl PasswordManager {
         }
     }
 
-    pub fn close_manager(&mut self) {
+    pub fn close_manager(&mut self, path: String) {
         self.state = State::Locked;
         self.encryption_key = None;
-        self.save_file().expect("Error saving the file.")
+        self.save_file(path).expect("Error saving the file.")
     }
 
     pub fn add_password(
@@ -147,15 +146,15 @@ impl PasswordManager {
         Ok(())
     }
 
-    fn save_file(&self) -> Result<(), &'static str> {
+    fn save_file(&self, path: String) -> Result<(), &'static str> {
         if self.state == State::Unlocked {
             return Err("The manager is unlocked, you must lock it before saving the file.");
         } else {
+            let new_path = format!("{}/passwords.json", path);
             let json_data =
                 serde_json::to_string_pretty(self).expect("Error serializing to the json format.");
 
-            fs::write(Self::FILE_PATH, json_data)
-                .expect("Error trying to save the file on the disk.");
+            fs::write(new_path, json_data).expect("Error trying to save the file on the disk.");
 
             Ok(())
         }
@@ -172,45 +171,58 @@ fn decrypt_password(password: String, key: MagicCrypt256) -> String {
 }
 
 pub fn launch_program() -> PasswordManager {
-    match PasswordManager::load() {
-        Ok(mut existing_manager) => {
-            // mut because open_manager takes a &mut self
-            let input_master = dialoguer::Password::new()
-                .with_prompt("Enter your master password ")
-                .interact()
-                .unwrap();
+    let file_path = get_full_file_path("/.config/password-manager")
+        .expect("Couldn't find the HOME env variable.");
 
-            if let Err(e) = existing_manager.open_manager(input_master) {
-                eprintln!("Denied acces ! : {}", e);
-                process::exit(1);
-            }
+    // println!("{}", file_path);
+    if let Ok(mut existing_manager) = PasswordManager::load(file_path.clone()) {
+        // mut because open_manager takes a &mut self
+        let input_master = dialoguer::Password::new()
+            .with_prompt("Enter your master password ")
+            .interact()
+            .unwrap();
 
-            existing_manager
+        if let Err(e) = existing_manager.open_manager(input_master) {
+            eprintln!("Denied acces ! : {}", e);
+            process::exit(1);
         }
-        Err(_) => {
-            println!("Welcome on our password manager !");
 
-            let new_master = dialoguer::Password::new()
-                .with_prompt("Create a master password (you'll have to remember it !!)")
-                .with_confirmation("Retype de password, authentication failed.", "error")
-                .interact()
-                .unwrap();
+        existing_manager
+    } else {
+        create_config_folder(&file_path).expect("Error creating config file.");
+        println!("Welcome on our password manager !");
 
-            let new_manager = PasswordManager::new(new_master);
+        let new_master = dialoguer::Password::new()
+            .with_prompt("Create a master password (you'll have to remember it !!)")
+            .interact()
+            .unwrap();
 
-            if let Err(e) = new_manager.save_file() {
-                eprintln!("Error while saving the file on the disk : {}", e);
-                process::exit(1);
-            }
+        let new_manager = PasswordManager::new(new_master);
 
-            new_manager
+        if let Err(e) = new_manager.save_file(file_path.clone()) {
+            eprintln!("Error while saving the file on the disk : {}", e);
+            process::exit(1);
         }
+
+        new_manager
     }
 }
 
-pub fn find_create_folder(path: &str) -> Result<(), &'static str> {
-    match fs::create_dir_all(&path) {
+pub fn create_config_folder(path: &str) -> Result<(), &'static str> {
+    if let Err(_) = fs::create_dir_all(&path) {
+        return Err("Error creating the password-manager folder.");
+    }
+    let new_path = format!("{}/passwords.json", path);
+    match fs::File::create(new_path) {
         Ok(_) => Ok(()),
-        Err(_) => Err("Cannot find or create the folder."),
+        Err(_) => Err("Cannot create the password.json file."),
+    }
+}
+
+pub fn get_full_file_path(relative_path: &str) -> Result<String, &'static str> {
+    if let Ok(home) = env::var("HOME") {
+        return Ok(format!("{}{}", home, relative_path));
+    } else {
+        return Err("Couldn't find the HOME env variable.");
     }
 }

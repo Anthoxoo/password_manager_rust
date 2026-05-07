@@ -41,12 +41,15 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
 
+    let file_path = get_full_file_path("/.config/password-manager")
+        .expect("Couldn't find the HOME env variable.");
+
+    create_config_folder(&file_path).expect("Error creating or finding the folder.");
+
     let mut manager = launch_program();
-    find_create_folder("~/.config/password-manager")
-        .expect("Error creating or finding the folder.");
 
     match cli.command {
-        Commands::Exit => manager.close_manager(),
+        Commands::Exit => manager.close_manager(file_path),
         Commands::Add { url, username } => {
             let input_password = dialoguer::Password::new()
                 .with_prompt("Enter your master password ")
