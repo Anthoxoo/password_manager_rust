@@ -16,7 +16,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Exit,
     Add {
         #[arg(long)]
         url: String,
@@ -49,10 +48,9 @@ fn main() {
     let mut manager = launch_program();
 
     match cli.command {
-        Commands::Exit => manager.close_manager(file_path),
         Commands::Add { url, username } => {
             let input_password = dialoguer::Password::new()
-                .with_prompt("Enter your master password ")
+                .with_prompt("Enter the password associated with this url and username ")
                 .interact()
                 .unwrap();
 
@@ -85,4 +83,6 @@ fn main() {
             }
         }
     }
+
+    manager.close_manager(file_path)
 }
